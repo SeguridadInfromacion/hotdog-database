@@ -11,3 +11,6 @@ CREATE TABLE products (
     created_at   timestamptz  NOT NULL DEFAULT now(),
     updated_at   timestamptz  NOT NULL DEFAULT now()
 );
+
+-- «Perro Sencillo» y «perro sencillo» son el mismo producto: no puede haber gemelos.
+CREATE UNIQUE INDEX products_name_lower_idx ON products (lower(name));

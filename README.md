@@ -10,12 +10,13 @@ Documentación general: [hotdog-docs](https://github.com/SeguridadInfromacion/ho
 
 | Ruta | Base | Contenido |
 |---|---|---|
-| `auth/01_schema.sql` | `auth` | Tabla `users` |
+| `auth/01_schema.sql` | `auth` | Tablas `users` y `login_throttle` |
 | `products/01_schema.sql` | `products` | Tabla `products` |
 | `products/10_seed.sql` | `products` | Menú inicial |
 | `orders/01_schema.sql` | `orders` | Tablas `orders` y `order_items` |
 | `common/05_audit.sql` | las tres | Tabla `audit_log` |
-| `common/90_roles.sh` | las tres | Rol de aplicación con mínimo privilegio |
+| `common/20_role.sh` | las tres | Crea el rol de aplicación, sin permisos sobre las tablas |
+| `*/30_grants.sql` | cada una | Los permisos exactos que usa ese servicio |
 
 `hotdog-infra` monta estos archivos en `/docker-entrypoint-initdb.d/` de cada
 contenedor de PostgreSQL. Se ejecutan en orden alfabético, **solo la primera
@@ -24,7 +25,11 @@ vez** que se crea el volumen de datos.
 ## Decisiones de seguridad
 
 - **Mínimo privilegio.** La aplicación no se conecta como superusuario. Su rol
-  puede leer y escribir filas, pero no crear, alterar ni borrar tablas.
+  no puede crear, alterar ni borrar tablas, y sobre cada tabla tiene solo lo que
+  usa: `orders_app` inserta y lee ventas pero no puede editarlas ni borrarlas;
+  `auth_app` no puede borrar usuarios. Los nombres de los roles (`auth_app`,
+  `products_app`, `orders_app`) deben coincidir con `APP_DB_USER` en `hotdog-infra`.
+- **Topes por rol.** Máximo 20 conexiones y 5 segundos por consulta.
 - **Auditoría de solo-agregar.** En `audit_log` el rol de la aplicación solo
   puede `INSERT` y `SELECT`. Ni la propia aplicación puede borrar su rastro.
 - **Restricciones en la base.** Los `CHECK` (precio positivo, rol válido,
